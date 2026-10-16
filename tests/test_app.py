@@ -28,6 +28,18 @@ def test_root_redirects_to_static_index(client):
     assert response.headers["location"] == "/static/index.html"
 
 
+def test_static_index_serves_html(client):
+    # Arrange
+
+    # Act
+    response = client.get("/static/index.html")
+
+    # Assert
+    assert response.status_code == 200
+    assert response.headers["content-type"].startswith("text/html")
+    assert "<h1>Mergington High School</h1>" in response.text
+
+
 def test_get_activities_returns_activity_data_without_caching(client):
     # Arrange
     expected_activities = deepcopy(activities)
@@ -56,6 +68,19 @@ def test_signup_adds_participant(client):
     assert response.status_code == 200
     assert response.json() == {"message": f"Signed up {email} for {activity_name}"}
     assert email in activities[activity_name]["participants"]
+
+
+@pytest.mark.parametrize("method", ["post", "delete"])
+def test_signup_and_removal_require_email_query_parameter(client, method):
+    # Arrange
+    activity_name = "Basketball Team"
+
+    # Act
+    response = getattr(client, method)(f"/activities/{activity_name}/signup")
+
+    # Assert
+    assert response.status_code == 422
+    assert response.json()["detail"][0]["loc"] == ["query", "email"]
 
 
 def test_signup_returns_not_found_for_unknown_activity(client):
